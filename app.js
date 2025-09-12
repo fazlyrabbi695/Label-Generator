@@ -5,6 +5,8 @@ const qa = (s) => Array.from(document.querySelectorAll(s));
 const STORAGE_KEYS = {
   products: 'lg_products',
   settings: 'lg_settings',
+  lastProductId: 'lg_last_product_id',
+  autoBarcodes: 'lg_auto_barcodes',
 };
 
 function mmFromValue(value){
@@ -22,6 +24,15 @@ document.addEventListener('DOMContentLoaded', () => {
   bindActions();
   restoreSettings();
   renderSavedProducts();
+  // auto-load last used product into form (if any)
+  const lastId = localStorage.getItem(STORAGE_KEYS.lastProductId);
+  if(lastId){
+    const items = loadJSON(STORAGE_KEYS.products, []);
+    const p = items.find(i => i.id === lastId);
+    if(p){
+      applyProductToForm(p);
+    }
+  }
   renderPreview();
 });
 
@@ -40,6 +51,9 @@ function bindActions(){
   });
   q('#presetRongta3825Sample').addEventListener('click', () => applyRongtaSample());
   q('#saveDisplaySettings').addEventListener('click', saveDisplaySettings);
+  q('#resetDisplaySettings').addEventListener('click', resetDisplaySettings);
+  q('#saveBarcodeSettings').addEventListener('click', saveBarcodeSettings);
+  q('#resetBarcodeSettings').addEventListener('click', resetBarcodeSettings);
 
   // live update preview on inputs
   qa('input,select').forEach(el => el.addEventListener('change', onFormChanged));
@@ -49,6 +63,10 @@ function bindActions(){
     onFormChanged();
   });
   q('#qtyUnitCustom').addEventListener('input', onFormChanged);
+
+  // Date inputs: show dd/mm/yyyy placeholder using text-mode, switch to native picker on focus
+  setupDateInputWithPlaceholder('#packDate');
+  setupDateInputWithPlaceholder('#expDate');
 }
 
 function currentFormData(){
@@ -58,9 +76,9 @@ function currentFormData(){
     qty: Math.max(1, parseInt(q('#productQty').value || '1', 10)),
     qtyUnit: q('#qtyUnit').value === 'custom' ? (q('#qtyUnitCustom').value.trim() || 'ইউনিট') : q('#qtyUnit').value,
     price: parseFloat(q('#productPrice').value || '0'),
-    packDate: q('#packDate').value,
-    expDate: q('#expDate').value,
-    priceMode: q('#priceMode').value,
+    packDate: getISOFromDateInput('#packDate'),
+    expDate: getISOFromDateInput('#expDate'),
+    priceMode: 'inc',
     labelCount: Math.max(1, parseInt(q('#labelCount').value || '1', 10)),
     show: {
       name: q('#showName').checked,
@@ -96,7 +114,7 @@ function onFormChanged(){
   // live persist minimal settings (non-destructive)
   const existing = loadJSON(STORAGE_KEYS.settings, {});
   const next = { ...existing,
-    priceMode: data.priceMode,
+    priceMode: 'inc',
     labelSize: data.labelSize,
     barcode: { ...(existing.barcode||{}), type: data.barcode.type, height: data.barcode.height }
   };
@@ -116,6 +134,46 @@ function saveDisplaySettings(){
   alert('Display settings saved');
 }
 
+function resetDisplaySettings(){
+  // revert to defaults as defined in HTML (input default values)
+  q('#showName').checked = true;
+  q('#showVariation').checked = true;
+  q('#showQty').checked = true;
+  q('#showPrice').checked = true;
+  q('#showBiz').checked = true;
+  q('#showPack').checked = true;
+  q('#showExp').checked = true;
+  q('#fsName').value = 11;
+  q('#fsVariation').value = 6;
+  q('#fsQty').value = 7;
+  q('#fsPrice').value = 10;
+  q('#fsBiz').value = 7;
+  q('#fsPack').value = 9;
+  q('#fsExp').value = 9;
+  // keep bizName but allow clearing if desired
+  saveDisplaySettings();
+  renderPreview();
+}
+
+function saveBarcodeSettings(){
+  const data = currentFormData();
+  const existing = loadJSON(STORAGE_KEYS.settings, {});
+  const next = { ...existing,
+    labelSize: data.labelSize,
+    barcode: { ...(existing.barcode||{}), type: data.barcode.type, height: data.barcode.height }
+  };
+  saveJSON(STORAGE_KEYS.settings, next);
+  alert('Barcode settings saved');
+}
+
+function resetBarcodeSettings(){
+  q('#labelSize').value = '38x25';
+  q('#barcodeType').value = 'code128';
+  q('#barcodeHeight').value = 15;
+  saveBarcodeSettings();
+  renderPreview();
+}
+
 /* Products handling */
 function onAddProduct(){
   renderPreview();
@@ -125,9 +183,21 @@ function onSaveCurrentProduct(){
   const data = currentFormData();
   const products = loadJSON(STORAGE_KEYS.products, []);
   const id = crypto.randomUUID();
-  const product = { id, name: data.name, variation: data.variation, price: data.price, barcode: data.barcode.value };
+  const product = {
+    id,
+    name: data.name,
+    variation: data.variation,
+    qty: data.qty,
+    qtyUnit: data.qtyUnit,
+    price: data.price,
+    packDate: data.packDate,
+    expDate: data.expDate,
+    barcode: data.barcode.value,
+    createdAt: Date.now()
+  };
   products.push(product);
   saveJSON(STORAGE_KEYS.products, products);
+  localStorage.setItem(STORAGE_KEYS.lastProductId, id);
   renderSavedProducts();
 }
 
@@ -145,6 +215,7 @@ function renderSavedProducts(){
   list.innerHTML = '';
   products
     .filter(p => `${p.name} ${p.variation}`.toLowerCase().includes(term))
+    .sort((a,b) => (b.createdAt||0) - (a.createdAt||0))
     .forEach(p => {
       const row = document.createElement('div');
       row.className = 'saved-item';
@@ -155,10 +226,8 @@ function renderSavedProducts(){
       actions.style.gap = '6px';
       const useBtn = document.createElement('button'); useBtn.className='btn btn-secondary'; useBtn.textContent='Use';
       useBtn.onclick = () => {
-        q('#productName').value = p.name;
-        q('#productVariation').value = p.variation || '';
-        q('#productPrice').value = p.price ?? '';
-        q('#barcodeValue').value = p.barcode || '';
+        applyProductToForm(p);
+        localStorage.setItem(STORAGE_KEYS.lastProductId, p.id);
         renderPreview();
       };
       const delBtn = document.createElement('button'); delBtn.className='btn btn-danger'; delBtn.textContent='Delete';
@@ -173,6 +242,29 @@ function renderSavedProducts(){
     });
 }
 
+function applyProductToForm(p){
+  q('#productName').value = p.name || '';
+  q('#productVariation').value = p.variation || '';
+  q('#productPrice').value = p.price ?? '';
+  q('#productQty').value = p.qty ?? 1;
+  if(p.qtyUnit){
+    const presetUnits = ['গ্রাম','কেজি','পিস','লিটার','মিলি'];
+    if(presetUnits.includes(p.qtyUnit)){
+      q('#qtyUnit').value = p.qtyUnit;
+      q('#qtyUnitCustom').style.display = 'none';
+      q('#qtyUnitCustom').value = '';
+    } else {
+      q('#qtyUnit').value = 'custom';
+      q('#qtyUnitCustom').style.display = '';
+      q('#qtyUnitCustom').value = p.qtyUnit;
+    }
+  }
+  // dates expect ISO; ensure text-mode reflects
+  if(p.packDate){ const el = q('#packDate'); el.type='date'; el.value = p.packDate; el.blur(); }
+  if(p.expDate){ const el = q('#expDate'); el.type='date'; el.value = p.expDate; el.blur(); }
+  q('#barcodeValue').value = p.barcode || '';
+}
+
 /* Preview */
 function renderPreview(){
   const data = currentFormData();
@@ -184,19 +276,14 @@ function renderPreview(){
 
   const tpl = q('#labelTemplate');
   const count = data.labelCount;
-  const baseVal = data.barcode.value;
-  const baseNumeric = getNumeric(baseVal);
-  const padLen = String(baseVal || '').length;
+  // determine one barcode for this product (same across duplicates)
+  const providedVal = data.barcode.value;
+  const productKey = makeProductKey(data);
+  const stableAutoVal = providedVal ? providedVal : getOrGenerateAutoBarcode(productKey);
   for(let i=0;i<count;i++){
     const el = tpl.content.firstElementChild.cloneNode(true);
     const d = JSON.parse(JSON.stringify(data));
-    if(baseNumeric !== null){
-      d.barcode.value = padNumber(baseNumeric + i, padLen);
-    } else if(!d.barcode.value){
-      // auto-generate if empty (timestamp-based short code)
-      const seed = Date.now().toString().slice(-8);
-      d.barcode.value = padNumber(parseInt(seed,10) + i, 8);
-    }
+    d.barcode.value = stableAutoVal;
     applyDataToLabel(el, d);
     el.style.width = `${w}mm`;
     el.style.height = `${h}mm`;
@@ -233,16 +320,19 @@ function applyDataToLabel(el, data){
 
   const dateParts = [];
   dates.innerHTML = '';
-  if(data.show.pack && data.packDate){
+  // Show Pckg with placeholder if toggled ON even when date not chosen
+  if(data.show.pack){
     const s = document.createElement('span');
-    s.textContent = `Pckg: ${formatDate(data.packDate)}`;
+    const packText = data.packDate ? formatDate(data.packDate) : 'dd/mm/yyyy';
+    s.textContent = `Pckg: ${packText}`;
     s.style.fontSize = `${data.fonts.pack}px`;
     dateParts.push(s);
   }
-  // Always show expire if date is provided, regardless of checkbox state
-  if(data.expDate){
+  // Show EXP if date provided OR toggle is ON; use placeholder if empty
+  if(data.expDate || data.show.exp){
     const s = document.createElement('span');
-    s.textContent = `EXP: ${formatDate(data.expDate)}`;
+    const expText = data.expDate ? formatDate(data.expDate) : 'dd/mm/yyyy';
+    s.textContent = `EXP: ${expText}`;
     s.style.fontSize = `${data.fonts.exp}px`;
     dateParts.push(s);
   }
@@ -301,20 +391,6 @@ function onPrint(){
   // some browsers need a frame to apply @page; defer to next frame
   requestAnimationFrame(() => setTimeout(() => {
     window.print();
-    // after print, set next sequential barcode value if numeric
-    const baseVal = data.barcode.value;
-    const baseNumeric = getNumeric(baseVal);
-    if(baseNumeric !== null){
-      const nextVal = padNumber(baseNumeric + data.labelCount, String(baseVal).length);
-      q('#barcodeValue').value = nextVal;
-      onFormChanged();
-    } else if(!baseVal){
-      // if we auto-generated from timestamp, continue the sequence
-      const seed = Date.now().toString().slice(-8);
-      const nextVal = padNumber(parseInt(seed,10) + data.labelCount, 8);
-      q('#barcodeValue').value = nextVal;
-      onFormChanged();
-    }
   }, 0));
 }
 
@@ -343,7 +419,7 @@ function applyRongtaSample(){
 /* Settings persistence */
 function restoreSettings(reset=false){
   const s = reset ? {} : loadJSON(STORAGE_KEYS.settings, {});
-  if(s.priceMode) q('#priceMode').value = s.priceMode;
+  // priceMode UI removed; ignore if present
   if(s.show){
     if('name' in s.show) q('#showName').checked = !!s.show.name;
     if('variation' in s.show) q('#showVariation').checked = !!s.show.variation;
@@ -351,7 +427,7 @@ function restoreSettings(reset=false){
     if('price' in s.show) q('#showPrice').checked = !!s.show.price;
     if('biz' in s.show) q('#showBiz').checked = !!s.show.biz;
     if('pack' in s.show) q('#showPack').checked = !!s.show.pack;
-    if('exp' in s.show) q('#showExp').checked = !!s.show.exp; // only set if defined
+    if('exp' in s.show) q('#showExp').checked = !!s.show.exp;
   }
   if(s.fonts){
     if('name' in s.fonts) q('#fsName').value = s.fonts.name;
@@ -363,9 +439,11 @@ function restoreSettings(reset=false){
     if('exp' in s.fonts) q('#fsExp').value = s.fonts.exp;
   }
   if(s.bizName) q('#bizName').value = s.bizName;
-  q('#labelSize').value = s.labelSize || '38x25'; // default 38x25
-  if(s.barcode){ q('#barcodeType').value = s.barcode.type; q('#barcodeHeight').value = s.barcode.height; }
-  // restore qty unit if saved in fonts/show settings block not necessary
+  if('labelSize' in s) q('#labelSize').value = s.labelSize || '38x25'; else q('#labelSize').value = '38x25';
+  if(s.barcode){
+    if('type' in s.barcode && q('#barcodeType')) q('#barcodeType').value = s.barcode.type;
+    if('height' in s.barcode && q('#barcodeHeight')) q('#barcodeHeight').value = s.barcode.height;
+  }
 }
 
 /* Theme */
@@ -382,8 +460,69 @@ function formatCurrency(amount, mode){
   return new Intl.NumberFormat('bn-BD', { style: 'currency', currency: 'BDT', maximumFractionDigits: 2 }).format(val) + (mode==='inc'?' (Inc)':' (Exc)');
 }
 function formatDate(iso){
-  const d = new Date(iso+'T00:00:00');
-  return d.toLocaleDateString('bn-BD');
+  if(!iso) return '';
+  const parts = String(iso).split('-');
+  if(parts.length === 3){
+    const [y,m,d] = parts;
+    const dd = d.padStart(2,'0');
+    const mm = m.padStart(2,'0');
+    return `${dd}/${mm}/${y}`;
+  }
+  try{
+    const d = new Date(iso+'T00:00:00');
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yy = d.getFullYear();
+    return `${dd}/${mm}/${yy}`;
+  }catch{
+    return String(iso);
+  }
+}
+
+// Force dd/mm/yyyy placeholder on date inputs while not focused/empty
+function setupDateInputWithPlaceholder(selector){
+  const input = q(selector);
+  if(!input) return;
+  const toTextMode = () => {
+    // if has a value (ISO), display formatted dd/mm/yyyy in text mode
+    if(input.value){
+      input.dataset.iso = input.value; // store ISO yyyy-mm-dd
+      input.type = 'text';
+      input.value = formatDate(input.dataset.iso);
+    } else {
+      input.type = 'text';
+      input.value = '';
+      input.placeholder = 'dd/mm/yyyy';
+    }
+  };
+  const toDateMode = () => {
+    input.type = 'date';
+    if(input.dataset.iso){ input.value = input.dataset.iso; }
+  };
+  input.addEventListener('focus', toDateMode);
+  input.addEventListener('blur', toTextMode);
+  toTextMode();
+}
+
+// Read dd/mm/yyyy (text-mode) or yyyy-mm-dd (date-mode) and return ISO yyyy-mm-dd
+function getISOFromDateInput(selector){
+  const el = q(selector);
+  if(!el) return '';
+  if(el.type === 'date'){
+    return el.value || '';
+  }
+  const v = (el.value || '').trim();
+  if(!v) return '';
+  // expect dd/mm/yyyy
+  const m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m){
+    const dd = m[1].padStart(2,'0');
+    const mm = m[2].padStart(2,'0');
+    const yy = m[3];
+    return `${yy}-${mm}-${dd}`;
+  }
+  // fallback to stored iso
+  return el.dataset.iso || '';
 }
 
 // Barcode helpers
@@ -397,6 +536,23 @@ function padNumber(num, len){
   const s = String(num);
   if(s.length >= len) return s;
   return '0'.repeat(len - s.length) + s;
+}
+
+// Auto-barcode per product (stable across duplicates, distinct per product)
+function makeProductKey(data){
+  return `${(data.name||'').trim().toLowerCase()}|${(data.variation||'').trim().toLowerCase()}`;
+}
+function getOrGenerateAutoBarcode(productKey){
+  const map = loadJSON(STORAGE_KEYS.autoBarcodes, {});
+  if(map[productKey]) return map[productKey];
+  // generate new 8-digit based on current time, ensure uniqueness against existing values
+  let seed = Date.now().toString().slice(-8);
+  while(Object.values(map).includes(seed)){
+    seed = String((parseInt(seed,10)+1)%99999999).padStart(8,'0');
+  }
+  map[productKey] = seed;
+  saveJSON(STORAGE_KEYS.autoBarcodes, map);
+  return seed;
 }
 
 

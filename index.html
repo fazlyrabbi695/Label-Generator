@@ -60,13 +60,6 @@
             <input id="expDate" type="date" />
           </div>
           <div>
-            <label>সেলিং প্রাইস গ্রুপ</label>
-            <select id="priceMode">
-              <option value="inc">ট্যাক্সসহ</option>
-              <option value="exc">ট্যাক্স ছাড়া</option>
-            </select>
-          </div>
-          <div>
             <label>কতটি লেবেল</label>
             <input id="labelCount" type="number" min="1" step="1" value="1" />
           </div>
@@ -92,35 +85,35 @@
             <label><input type="checkbox" id="showName" checked /> প্রোডাক্ট নাম</label>
             <div class="inline">
               <label>Font</label>
-              <input id="fsName" type="number" min="8" max="24" value="12" /> px
+              <input id="fsName" type="number" min="6" max="24" value="11" /> px
             </div>
           </div>
           <div class="toggle">
             <label><input type="checkbox" id="showVariation" checked /> ভ্যারিয়েশন</label>
             <div class="inline">
               <label>Font</label>
-              <input id="fsVariation" type="number" min="8" max="24" value="11" /> px
+              <input id="fsVariation" type="number" min="6" max="24" value="6" /> px
             </div>
           </div>
           <div class="toggle">
             <label><input type="checkbox" id="showQty" checked /> পরিমাণ</label>
             <div class="inline">
               <label>Font</label>
-              <input id="fsQty" type="number" min="8" max="24" value="11" /> px
+              <input id="fsQty" type="number" min="6" max="24" value="7" /> px
             </div>
           </div>
           <div class="toggle">
             <label><input type="checkbox" id="showPrice" checked /> দাম</label>
             <div class="inline">
               <label>Font</label>
-              <input id="fsPrice" type="number" min="8" max="24" value="12" /> px
+              <input id="fsPrice" type="number" min="6" max="24" value="10" /> px
             </div>
           </div>
           <div class="toggle">
             <label><input type="checkbox" id="showBiz" checked /> ব্যবসার নাম</label>
             <div class="inline">
               <label>Font</label>
-              <input id="fsBiz" type="number" min="8" max="24" value="11" /> px
+              <input id="fsBiz" type="number" min="6" max="24" value="7" /> px
             </div>
             <input id="bizName" type="text" placeholder="ব্যবসার নাম" />
           </div>
@@ -128,19 +121,20 @@
             <label><input type="checkbox" id="showPack" checked /> প্যাকিং ডেট</label>
             <div class="inline">
               <label>Font</label>
-              <input id="fsPack" type="number" min="8" max="24" value="10" /> px
+              <input id="fsPack" type="number" min="6" max="24" value="9" /> px
             </div>
           </div>
           <div class="toggle">
             <label><input type="checkbox" id="showExp" checked /> মেয়াদ শেষ ডেট</label>
             <div class="inline">
               <label>Font</label>
-              <input id="fsExp" type="number" min="8" max="24" value="10" /> px
+              <input id="fsExp" type="number" min="6" max="24" value="9" /> px
             </div>
           </div>
         </div>
-        <div class="row" style="margin-top: 8px">
+        <div class="row" style="margin-top: 8px; gap: 8px">
           <button id="saveDisplaySettings" class="btn btn-secondary" type="button">Save display settings</button>
+          <button id="resetDisplaySettings" class="btn btn-danger" type="button">Reset display settings</button>
         </div>
       </section>
 
@@ -154,6 +148,7 @@
               <option value="50x30">50×30 mm</option>
               <option value="58x40">58×40 mm</option>
               <option value="70x35">70×35 mm</option>
+              <option value="75x50">75×50 mm</option>
             </select>
             <div class="row" style="margin-top: 6px">
               <button id="presetRongta3825" class="btn btn-secondary" type="button">Rongta 38×25</button>
@@ -174,8 +169,12 @@
           </div>
           <div>
             <label>বারকোড উচ্চতা</label>
-            <input id="barcodeHeight" type="number" min="20" max="80" value="38" /> px
+            <input id="barcodeHeight" type="number" min="10" max="80" value="15" /> px
           </div>
+        </div>
+        <div class="row" style="margin-top: 8px; gap: 8px">
+          <button id="saveBarcodeSettings" class="btn btn-secondary" type="button">Save barcode settings</button>
+          <button id="resetBarcodeSettings" class="btn btn-danger" type="button">Reset barcode settings</button>
         </div>
       </section>
 
