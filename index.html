@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="bn">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>লেবেল জেনারেটর</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">লেবেল জেনারেটর</div>
+      <div class="header-actions">
+        <button id="toggleTheme" class="btn btn-ghost" title="ডার্ক/লাইট মোড">🌓</button>
+        <button id="exportPdf" class="btn btn-ghost" title="PDF এ এক্সপোর্ট (প্রিন্ট ডায়ালগ)">PDF</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="card">
+        <h2>প্রোডাক্ট</h2>
+        <div class="grid grid-4">
+          <div>
+            <label>প্রোডাক্ট নাম</label>
+            <input id="productName" type="text" placeholder="যেমন: সরিষার তেল 500g" />
+          </div>
+          <div>
+            <label>ভ্যারিয়েশন</label>
+            <input id="productVariation" type="text" placeholder="যেমন: 500g / কালো" />
+          </div>
+          <div>
+            <label>দাম</label>
+            <input id="productPrice" type="number" min="0" step="0.01" placeholder="0.00" />
+          </div>
+          <div>
+            <label>পরিমাণ</label>
+            <div class="inline" style="gap: 8px">
+              <input id="productQty" type="number" min="1" step="1" value="1" style="max-width: 120px" />
+              <select id="qtyUnit" style="max-width: 140px">
+                <option value="গ্রাম">গ্রাম</option>
+                <option value="কেজি">কেজি</option>
+                <option value="পিস">পিস</option>
+                <option value="লিটার">লিটার</option>
+                <option value="মিলি">মিলি</option>
+                <option value="custom">Custom…</option>
+              </select>
+              <input id="qtyUnitCustom" type="text" placeholder="একক" style="display: none; max-width: 120px" />
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-4">
+          <div>
+            <label>প্যাকিং ডেট</label>
+            <input id="packDate" type="date" />
+          </div>
+          <div>
+            <label>মেয়াদ শেষ ডেট</label>
+            <input id="expDate" type="date" />
+          </div>
+          <div>
+            <label>সেলিং প্রাইস গ্রুপ</label>
+            <select id="priceMode">
+              <option value="inc">ট্যাক্সসহ</option>
+              <option value="exc">ট্যাক্স ছাড়া</option>
+            </select>
+          </div>
+          <div>
+            <label>কতটি লেবেল</label>
+            <input id="labelCount" type="number" min="1" step="1" value="1" />
+          </div>
+        </div>
+        <div class="row gap">
+          <button id="addProduct" class="btn">Add Product</button>
+          <button id="saveProduct" class="btn btn-secondary">Save Product</button>
+          <button id="clearSaved" class="btn btn-danger" title="লোকাল স্টোরেজ ক্লিয়ার">Clear saved data</button>
+        </div>
+        <div class="row">
+          <div class="flex-1">
+            <label>সেভ করা প্রোডাক্ট থেকে বাছাই</label>
+            <input id="productSearch" type="search" placeholder="Saved products search" />
+            <div id="savedProducts" class="saved-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>লেবেলে দেখাবো যেসব তথ্য</h2>
+        <div class="grid grid-3">
+          <div class="toggle">
+            <label><input type="checkbox" id="showName" checked /> প্রোডাক্ট নাম</label>
+            <div class="inline">
+              <label>Font</label>
+              <input id="fsName" type="number" min="8" max="24" value="12" /> px
+            </div>
+          </div>
+          <div class="toggle">
+            <label><input type="checkbox" id="showVariation" checked /> ভ্যারিয়েশন</label>
+            <div class="inline">
+              <label>Font</label>
+              <input id="fsVariation" type="number" min="8" max="24" value="11" /> px
+            </div>
+          </div>
+          <div class="toggle">
+            <label><input type="checkbox" id="showQty" checked /> পরিমাণ</label>
+            <div class="inline">
+              <label>Font</label>
+              <input id="fsQty" type="number" min="8" max="24" value="11" /> px
+            </div>
+          </div>
+          <div class="toggle">
+            <label><input type="checkbox" id="showPrice" checked /> দাম</label>
+            <div class="inline">
+              <label>Font</label>
+              <input id="fsPrice" type="number" min="8" max="24" value="12" /> px
+            </div>
+          </div>
+          <div class="toggle">
+            <label><input type="checkbox" id="showBiz" checked /> ব্যবসার নাম</label>
+            <div class="inline">
+              <label>Font</label>
+              <input id="fsBiz" type="number" min="8" max="24" value="11" /> px
+            </div>
+            <input id="bizName" type="text" placeholder="ব্যবসার নাম" />
+          </div>
+          <div class="toggle">
+            <label><input type="checkbox" id="showPack" checked /> প্যাকিং ডেট</label>
+            <div class="inline">
+              <label>Font</label>
+              <input id="fsPack" type="number" min="8" max="24" value="10" /> px
+            </div>
+          </div>
+          <div class="toggle">
+            <label><input type="checkbox" id="showExp" checked /> মেয়াদ শেষ ডেট</label>
+            <div class="inline">
+              <label>Font</label>
+              <input id="fsExp" type="number" min="8" max="24" value="10" /> px
+            </div>
+          </div>
+        </div>
+        <div class="row" style="margin-top: 8px">
+          <button id="saveDisplaySettings" class="btn btn-secondary" type="button">Save display settings</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>বারকোড সেটিংস</h2>
+        <div class="grid grid-4">
+          <div>
+            <label>লেবেল সাইজ</label>
+            <select id="labelSize">
+              <option value="38x25">38×25 mm</option>
+              <option value="50x30">50×30 mm</option>
+              <option value="58x40">58×40 mm</option>
+              <option value="70x35">70×35 mm</option>
+            </select>
+            <div class="row" style="margin-top: 6px">
+              <button id="presetRongta3825" class="btn btn-secondary" type="button">Rongta 38×25</button>
+              <button id="presetRongta3825Sample" class="btn btn-secondary" type="button">Rongta 38×25 (Sample)</button>
+            </div>
+          </div>
+          <div>
+            <label>বারকোড টাইপ</label>
+            <select id="barcodeType">
+              <option value="code128">Code128</option>
+              <option value="ean13">EAN-13</option>
+              <option value="upc">UPC</option>
+            </select>
+          </div>
+          <div>
+            <label>বারকোড ভ্যালু</label>
+            <input id="barcodeValue" type="text" placeholder="123456789012" />
+          </div>
+          <div>
+            <label>বারকোড উচ্চতা</label>
+            <input id="barcodeHeight" type="number" min="20" max="80" value="38" /> px
+          </div>
+        </div>
+      </section>
+
+      <section class="card actions">
+        <button id="previewBtn" class="btn btn-primary">Preview</button>
+        <button id="printBtn" class="btn btn-primary">Print</button>
+        <button id="resetSettings" class="btn btn-secondary">Reset settings</button>
+      </section>
+
+      <section class="preview-wrap">
+        <aside class="preview-controls">
+          <h3>লাইভ প্রিভিউ</h3>
+          <div class="hint">নিচের গ্রিডে আপনার লেবেলগুলো দেখা যাবে।</div>
+        </aside>
+        <div id="previewGrid" class="preview-grid"></div>
+      </section>
+    </main>
+
+    <template id="labelTemplate">
+      <div class="label">
+        <div class="l-biz"></div>
+        <div class="l-name"></div>
+        <div class="l-variation"></div>
+        <div class="l-qty"></div>
+        <div class="l-price"></div>
+        <div class="l-dates"></div>
+        <svg class="barcode"></svg>
+      </div>
+    </template>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
