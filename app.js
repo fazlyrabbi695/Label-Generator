@@ -135,24 +135,30 @@ function saveDisplaySettings(){
 }
 
 function resetDisplaySettings(){
-  // revert to defaults as defined in HTML (input default values)
-  q('#showName').checked = true;
-  q('#showVariation').checked = true;
-  q('#showQty').checked = true;
-  q('#showPrice').checked = true;
-  q('#showBiz').checked = true;
-  q('#showPack').checked = true;
-  q('#showExp').checked = true;
-  q('#fsName').value = 11;
-  q('#fsVariation').value = 6;
-  q('#fsQty').value = 7;
-  q('#fsPrice').value = 10;
-  q('#fsBiz').value = 7;
-  q('#fsPack').value = 9;
-  q('#fsExp').value = 9;
-  // keep bizName but allow clearing if desired
-  saveDisplaySettings();
-  renderPreview();
+  const password = prompt('ডিসপ্লে সেটিংস রিসেট করবেন? পাসওয়ার্ড দিন:');
+  if(password === '123456'){
+    // revert to defaults as defined in HTML (input default values)
+    q('#showName').checked = true;
+    q('#showVariation').checked = true;
+    q('#showQty').checked = true;
+    q('#showPrice').checked = true;
+    q('#showBiz').checked = true;
+    q('#showPack').checked = true;
+    q('#showExp').checked = true;
+    q('#fsName').value = 11;
+    q('#fsVariation').value = 6;
+    q('#fsQty').value = 7;
+    q('#fsPrice').value = 10;
+    q('#fsBiz').value = 7;
+    q('#fsPack').value = 9;
+    q('#fsExp').value = 9;
+    // keep bizName but allow clearing if desired
+    saveDisplaySettings();
+    renderPreview();
+    alert('ডিসপ্লে সেটিংস রিসেট করা হয়েছে');
+  } else if(password !== null){
+    alert('ভুল পাসওয়ার্ড');
+  }
 }
 
 function saveBarcodeSettings(){
@@ -167,11 +173,17 @@ function saveBarcodeSettings(){
 }
 
 function resetBarcodeSettings(){
-  q('#labelSize').value = '38x25';
-  q('#barcodeType').value = 'code128';
-  q('#barcodeHeight').value = 15;
-  saveBarcodeSettings();
-  renderPreview();
+  const password = prompt('বারকোড সেটিংস রিসেট করবেন? পাসওয়ার্ড দিন:');
+  if(password === '123456'){
+    q('#labelSize').value = '38x25';
+    q('#barcodeType').value = 'code128';
+    q('#barcodeHeight').value = 15;
+    saveBarcodeSettings();
+    renderPreview();
+    alert('বারকোড সেটিংস রিসেট করা হয়েছে');
+  } else if(password !== null){
+    alert('ভুল পাসওয়ার্ড');
+  }
 }
 
 /* Products handling */
@@ -202,9 +214,13 @@ function onSaveCurrentProduct(){
 }
 
 function onClearSaved(){
-  if(confirm('লোকাল স্টোরেজে সেভ করা সব প্রোডাক্ট মুছে ফেলবেন?')){
+  const password = prompt('লোকাল স্টোরেজে সেভ করা সব প্রোডাক্ট মুছে ফেলবেন? পাসওয়ার্ড দিন:');
+  if(password === '123456'){
     localStorage.removeItem(STORAGE_KEYS.products);
     renderSavedProducts();
+    alert('সব প্রোডাক্ট মুছে ফেলা হয়েছে');
+  } else if(password !== null){
+    alert('ভুল পাসওয়ার্ড');
   }
 }
 
@@ -232,9 +248,15 @@ function renderSavedProducts(){
       };
       const delBtn = document.createElement('button'); delBtn.className='btn btn-danger'; delBtn.textContent='Delete';
       delBtn.onclick = () => {
-        const items = loadJSON(STORAGE_KEYS.products, []);
-        saveJSON(STORAGE_KEYS.products, items.filter(i => i.id !== p.id));
-        renderSavedProducts();
+        const password = prompt('প্রোডাক্ট মুছে ফেলবেন? পাসওয়ার্ড দিন:');
+        if(password === '123456'){
+          const items = loadJSON(STORAGE_KEYS.products, []);
+          saveJSON(STORAGE_KEYS.products, items.filter(i => i.id !== p.id));
+          renderSavedProducts();
+          alert('প্রোডাক্ট মুছে ফেলা হয়েছে');
+        } else if(password !== null){
+          alert('ভুল পাসওয়ার্ড');
+        }
       };
       actions.appendChild(useBtn); actions.appendChild(delBtn);
       row.appendChild(actions);
@@ -365,6 +387,9 @@ function applyDataToLabel(el, data){
   const opts = barcodeOptions(data);
   try { JsBarcode(svg, data.barcode.value || '000000000000', opts); }
   catch(e){ svg.replaceWith(document.createElement('div')); }
+
+  // Auto-scale content to fit label size
+  autoScaleLabelContent(el, data);
 }
 
 function barcodeOptions(data){
@@ -457,7 +482,7 @@ function escapeHtml(str){
 }
 function formatCurrency(amount, mode){
   const val = amount; // tax calc can be added
-  return new Intl.NumberFormat('bn-BD', { style: 'currency', currency: 'BDT', maximumFractionDigits: 2 }).format(val) + (mode==='inc'?' (Inc)':' (Exc)');
+  return new Intl.NumberFormat('bn-BD', { style: 'currency', currency: 'BDT', maximumFractionDigits: 2 }).format(val);
 }
 function formatDate(iso){
   if(!iso) return '';
@@ -553,6 +578,75 @@ function getOrGenerateAutoBarcode(productKey){
   map[productKey] = seed;
   saveJSON(STORAGE_KEYS.autoBarcodes, map);
   return seed;
+}
+
+// Auto-scale label content to fit within label dimensions
+function autoScaleLabelContent(labelEl, data){
+  const { w, h } = mmFromValue(data.labelSize);
+  
+  // Convert mm to pixels (approximate: 1mm ≈ 3.78px at 96dpi)
+  const labelWidthPx = w * 3.78;
+  const labelHeightPx = h * 3.78;
+  
+  // Get all visible text elements
+  const textElements = [
+    { el: labelEl.querySelector('.l-biz'), weight: 1.2 },
+    { el: labelEl.querySelector('.l-name'), weight: 1.0 },
+    { el: labelEl.querySelector('.l-variation'), weight: 0.8 },
+    { el: labelEl.querySelector('.l-qty'), weight: 0.7 },
+    { el: labelEl.querySelector('.l-price'), weight: 0.9 },
+    { el: labelEl.querySelector('.l-dates'), weight: 0.6 }
+  ].filter(item => item.el && item.el.style.display !== 'none');
+  
+  const barcodeEl = labelEl.querySelector('svg.barcode');
+  const hasBarcode = barcodeEl && barcodeEl.children.length > 0;
+  
+  // Calculate available space
+  const padding = 4; // 4px padding
+  const availableWidth = labelWidthPx - (padding * 2);
+  const availableHeight = labelHeightPx - (padding * 2);
+  
+  // Reserve space for barcode (if present)
+  const barcodeHeight = hasBarcode ? Math.min(data.barcode.height, availableHeight * 0.4) : 0;
+  const textAreaHeight = availableHeight - barcodeHeight - 2; // 2px gap
+  
+  // Calculate total text content height needed
+  let totalTextHeight = 0;
+  textElements.forEach(item => {
+    const fontSize = parseInt(item.el.style.fontSize) || 10;
+    totalTextHeight += fontSize * item.weight;
+  });
+  
+  // Calculate scale factor
+  const heightScale = textAreaHeight / totalTextHeight;
+  const widthScale = availableWidth / (availableWidth * 1.1); // Allow some overflow tolerance
+  const scale = Math.min(heightScale, widthScale, 1.0); // Don't scale up, only down
+  
+  // Apply scaling if needed
+  if(scale < 0.95) { // Only scale if significant reduction needed
+    textElements.forEach(item => {
+      const currentFontSize = parseInt(item.el.style.fontSize) || 10;
+      const newFontSize = Math.max(6, Math.floor(currentFontSize * scale));
+      item.el.style.fontSize = `${newFontSize}px`;
+    });
+    
+    // Scale barcode if present
+    if(hasBarcode && barcodeEl) {
+      const currentHeight = data.barcode.height;
+      const newHeight = Math.max(10, Math.floor(currentHeight * scale));
+      barcodeEl.style.height = `${newHeight}px`;
+      barcodeEl.style.width = '100%';
+    }
+  }
+  
+  // Ensure label uses full available space efficiently
+  labelEl.style.display = 'flex';
+  labelEl.style.flexDirection = 'column';
+  labelEl.style.justifyContent = 'space-between';
+  labelEl.style.alignItems = 'center';
+  labelEl.style.padding = `${padding}px`;
+  labelEl.style.boxSizing = 'border-box';
+  labelEl.style.overflow = 'hidden';
 }
 
 
