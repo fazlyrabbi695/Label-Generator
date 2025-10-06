@@ -33,6 +33,9 @@ document.addEventListener('DOMContentLoaded', () => {
       applyProductToForm(p);
     }
   }
+  
+  // Initialize unit options based on current quantity
+  updateUnitOptions();
   renderPreview();
 });
 
@@ -54,6 +57,7 @@ function bindActions(){
   q('#resetDisplaySettings').addEventListener('click', resetDisplaySettings);
   q('#saveBarcodeSettings').addEventListener('click', saveBarcodeSettings);
   q('#resetBarcodeSettings').addEventListener('click', resetBarcodeSettings);
+  q('#toggleBoldText').addEventListener('click', toggleBoldText);
 
   // live update preview on inputs
   qa('input,select').forEach(el => el.addEventListener('change', onFormChanged));
@@ -63,6 +67,9 @@ function bindActions(){
     onFormChanged();
   });
   q('#qtyUnitCustom').addEventListener('input', onFormChanged);
+  
+  // Dynamic unit options based on numeral system
+  q('#productQty').addEventListener('input', updateUnitOptions);
 
   // Date inputs: show dd/mm/yyyy placeholder using text-mode, switch to native picker on focus
   setupDateInputWithPlaceholder('#packDate');
@@ -73,9 +80,9 @@ function currentFormData(){
   return {
     name: q('#productName').value.trim(),
     variation: q('#productVariation').value.trim(),
-    qty: Math.max(1, parseInt(q('#productQty').value || '1', 10)),
+    qty: q('#productQty').value.trim() || '1',
     qtyUnit: q('#qtyUnit').value === 'custom' ? (q('#qtyUnitCustom').value.trim() || 'ইউনিট') : q('#qtyUnit').value,
-    price: parseFloat(q('#productPrice').value || '0'),
+    price: q('#productPrice').value.trim() || '0',
     packDate: getISOFromDateInput('#packDate'),
     expDate: getISOFromDateInput('#expDate'),
     priceMode: 'inc',
@@ -132,6 +139,19 @@ function saveDisplaySettings(){
   };
   saveJSON(STORAGE_KEYS.settings, next);
   alert('Display settings saved');
+}
+
+function toggleBoldText() {
+  const existing = loadJSON(STORAGE_KEYS.settings, {});
+  const isBold = !(existing.boldTextActive ?? false);
+  const next = { ...existing, boldTextActive: isBold };
+  saveJSON(STORAGE_KEYS.settings, next);
+  
+  const button = q('#toggleBoldText');
+  button.textContent = isBold ? 'Bold Text Active' : 'Toggle Bold Text';
+  button.className = isBold ? 'btn btn-primary' : 'btn btn-secondary';
+  
+  renderPreview();
 }
 
 function resetDisplaySettings(){
@@ -268,7 +288,7 @@ function applyProductToForm(p){
   q('#productName').value = p.name || '';
   q('#productVariation').value = p.variation || '';
   q('#productPrice').value = p.price ?? '';
-  q('#productQty').value = p.qty ?? 1;
+  q('#productQty').value = p.qty ?? '1';
   if(p.qtyUnit){
     const presetUnits = ['গ্রাম','কেজি','পিস','লিটার','মিলি'];
     if(presetUnits.includes(p.qtyUnit)){
@@ -334,11 +354,14 @@ function applyDataToLabel(el, data){
   price.style.fontSize = `${data.fonts.price}px`;
   biz.style.fontSize = `${data.fonts.biz}px`;
 
+  // Detect language and get localized labels
+  const formLanguage = detectFormLanguage();
+  const labels = getLocalizedLabels(formLanguage);
+
   name.textContent = data.name || '';
   variation.textContent = data.variation || '';
-  qty.textContent = data.qty ? `Qty: ${data.qty}` : '';
-  if(data.qty){ qty.textContent = `Qty: ${data.qty} ${data.qtyUnit || ''}`; }
-  price.textContent = data.price ? `Price: ${formatCurrency(data.price, data.priceMode)}` : '';
+  qty.textContent = data.qty ? `${labels.qty}: ${data.qty} ${data.qtyUnit || ''}` : '';
+  price.textContent = data.price ? `${labels.price}: ${data.price}৳` : '';
 
   const dateParts = [];
   dates.innerHTML = '';
@@ -346,7 +369,7 @@ function applyDataToLabel(el, data){
   if(data.show.pack){
     const s = document.createElement('span');
     const packText = data.packDate ? formatDate(data.packDate) : 'dd/mm/yyyy';
-    s.textContent = `Pckg: ${packText}`;
+    s.textContent = `${labels.pckg}: ${packText}`;
     s.style.fontSize = `${data.fonts.pack}px`;
     dateParts.push(s);
   }
@@ -354,7 +377,7 @@ function applyDataToLabel(el, data){
   if(data.expDate || data.show.exp){
     const s = document.createElement('span');
     const expText = data.expDate ? formatDate(data.expDate) : 'dd/mm/yyyy';
-    s.textContent = `EXP: ${expText}`;
+    s.textContent = `${labels.exp}: ${expText}`;
     s.style.fontSize = `${data.fonts.exp}px`;
     dateParts.push(s);
   }
@@ -377,7 +400,7 @@ function applyDataToLabel(el, data){
     dates.style.display = 'none';
   }
 
-  // ব্যবসার নাম সবসময় উপরে বোল্ড
+  // ব্যবসার নাম সবসময় উপরে বোল্ড
   biz.textContent = data.bizName || '';
   biz.style.display = '';
   biz.style.fontWeight = '700';
@@ -390,6 +413,17 @@ function applyDataToLabel(el, data){
 
   // Auto-scale content to fit label size
   autoScaleLabelContent(el, data);
+
+  // Apply bold text styling if active
+  const settings = loadJSON(STORAGE_KEYS.settings, {});
+  const isBoldActive = settings.boldTextActive ?? false;
+  
+  if (isBoldActive) {
+    el.classList.add('bold-text');
+  } else {
+    el.classList.remove('bold-text');
+  }
+
 }
 
 function barcodeOptions(data){
@@ -403,6 +437,7 @@ function barcodeOptions(data){
     margin: 0,
     lineColor: '#000',
     background: '#fff',
+    font: 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Helvetica Neue, Arial, Noto Sans, sans-serif' // Use the same font as dates
   };
 }
 
@@ -468,6 +503,14 @@ function restoreSettings(reset=false){
   if(s.barcode){
     if('type' in s.barcode && q('#barcodeType')) q('#barcodeType').value = s.barcode.type;
     if('height' in s.barcode && q('#barcodeHeight')) q('#barcodeHeight').value = s.barcode.height;
+  }
+
+  // Restore bold text setting
+  const isBoldActive = s.boldTextActive ?? false;
+  const button = q('#toggleBoldText');
+  if (button) {
+    button.textContent = isBoldActive ? 'Bold Text Active' : 'Toggle Bold Text';
+    button.className = isBoldActive ? 'btn btn-primary' : 'btn btn-secondary';
   }
 }
 
@@ -578,6 +621,103 @@ function getOrGenerateAutoBarcode(productKey){
   map[productKey] = seed;
   saveJSON(STORAGE_KEYS.autoBarcodes, map);
   return seed;
+}
+
+// Detect numeral system (Bengali vs English)
+function detectNumeralSystem(value) {
+  const bengaliDigits = /[০-৯]/;
+  const englishDigits = /[0-9]/;
+  
+  if (bengaliDigits.test(value)) return 'bengali';
+  if (englishDigits.test(value)) return 'english';
+  return 'mixed'; // If both or neither
+}
+
+// Detect overall language preference from form inputs
+function detectFormLanguage() {
+  const name = q('#productName').value.trim();
+  const variation = q('#productVariation').value.trim();
+  const qty = q('#productQty').value.trim();
+  const price = q('#productPrice').value.trim();
+  
+  // Check for Bengali characters in any field
+  const bengaliPattern = /[অ-হ]/;
+  const hasBengaliText = bengaliPattern.test(name + variation + qty + price);
+  
+  // Check for Bengali numerals
+  const bengaliDigits = /[০-৯]/;
+  const hasBengaliDigits = bengaliDigits.test(qty + price);
+  
+  // If any Bengali text or digits found, use Bengali labels
+  if (hasBengaliText || hasBengaliDigits) return 'bengali';
+  
+  return 'english';
+}
+
+// Get localized label text based on language
+function getLocalizedLabels(language) {
+  if (language === 'bengali') {
+    return {
+      qty: 'পরিমাণ',
+      price: 'দাম',
+      pckg: 'প্যাকিং',
+      exp: 'মেয়াদ',
+      biz: 'ব্যবসা'
+    };
+  } else {
+    return {
+      qty: 'Qty',
+      price: 'Price',
+      pckg: 'Pckg',
+      exp: 'EXP',
+      biz: 'Business'
+    };
+  }
+}
+
+// Update unit options based on numeral system
+function updateUnitOptions() {
+  const qtyValue = q('#productQty').value.trim();
+  const numeralSystem = detectNumeralSystem(qtyValue);
+  const unitSelect = q('#qtyUnit');
+  const currentValue = unitSelect.value;
+  
+  // Define unit options
+  const bengaliUnits = [
+    { value: 'গ্রাম', text: 'গ্রাম' },
+    { value: 'কেজি', text: 'কেজি' },
+    { value: 'পিস', text: 'পিস' },
+    { value: 'লিটার', text: 'লিটার' },
+    { value: 'মিলি', text: 'মিলি' },
+    { value: 'custom', text: 'Custom…' }
+  ];
+  
+  const englishUnits = [
+    { value: 'গ্রাম', text: 'Gram' },
+    { value: 'কেজি', text: 'Kilogram' },
+    { value: 'পিস', text: 'Piece' },
+    { value: 'লিটার', text: 'Liter' },
+    { value: 'মিলি', text: 'Milliliter' },
+    { value: 'custom', text: 'Custom…' }
+  ];
+  
+  // Choose units based on numeral system
+  const units = numeralSystem === 'bengali' ? bengaliUnits : englishUnits;
+  
+  // Update dropdown options
+  unitSelect.innerHTML = '';
+  units.forEach(unit => {
+    const option = document.createElement('option');
+    option.value = unit.value;
+    option.textContent = unit.text;
+    if (unit.value === currentValue) {
+      option.selected = true;
+    }
+    unitSelect.appendChild(option);
+  });
+  
+  // Trigger change event to update preview
+  onFormChanged();
 }
 
 // Auto-scale label content to fit within label dimensions

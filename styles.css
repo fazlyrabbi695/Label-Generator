@@ -81,6 +81,16 @@ input::placeholder{color:#667085}
 .label .l-dates{font-size:10px}
 .label svg{width:100%}
 
+/* Bold text styles */
+.label.bold-text .l-name,
+.label.bold-text .l-variation,
+.label.bold-text .l-qty,
+.label.bold-text .l-price,
+.label.bold-text .l-biz,
+.label.bold-text .l-dates {
+  font-weight: 700;
+}
+
 /* Print styles */
 @media print{
   html, body{background:white; margin:0 !important; padding:0 !important}
@@ -89,7 +99,7 @@ input::placeholder{color:#667085}
   /* শুধু প্রিভিউ গ্রিড প্রিন্ট হবে */
   .container{max-width:unset;margin:0!important;padding:0!important}
   .preview-grid{display:block!important;width:100% !important;grid-template-columns:unset!important;gap:0!important;margin:0!important;padding:0!important;text-align:left !important}
-  /* প্রতিটি লেবেল একটি পেজ এবং প্রিন্টযোগ্য এরিয়ার ডটেড বর্ডার */
+  /* প্রতিটি লেবেল একটি পেজ এবং প্রিন্টযোগ্য এরিয়ার ডটেড বর্ডার */
   .label{border:1px dotted #999;border-radius:0;margin:0 !important;page-break-after:always;page-break-inside:avoid;display:block;vertical-align:top}
 }
 

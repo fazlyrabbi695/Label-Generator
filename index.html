@@ -14,7 +14,7 @@
       <div class="brand">লেবেল জেনারেটর</div>
       <div class="header-actions">
         <button id="toggleTheme" class="btn btn-ghost" title="ডার্ক/লাইট মোড">🌓</button>
-        <button id="exportPdf" class="btn btn-ghost" title="PDF এ এক্সপোর্ট (প্রিন্ট ডায়ালগ)">PDF</button>
+        <button id="exportPdf" class="btn btn-ghost" title="PDF এ এক্সপোর্ট (প্রিন্ট ডায়ালগ)">PDF</button>
       </div>
     </header>
 
@@ -27,17 +27,17 @@
             <input id="productName" type="text" placeholder="যেমন: সরিষার তেল 500g" />
           </div>
           <div>
-            <label>ভ্যারিয়েশন</label>
+            <label>ভ্যারিয়েশন</label>
             <input id="productVariation" type="text" placeholder="যেমন: 500g / কালো" />
           </div>
           <div>
             <label>দাম</label>
-            <input id="productPrice" type="number" min="0" step="0.01" placeholder="0.00" />
+            <input id="productPrice" type="text" placeholder="যেমন: 123456789 বা ১২৩৪৫৬৭৮৯" />
           </div>
           <div>
             <label>পরিমাণ</label>
             <div class="inline" style="gap: 8px">
-              <input id="productQty" type="number" min="1" step="1" value="1" style="max-width: 120px" />
+              <input id="productQty" type="text" value="1" placeholder="যেমন: ১ বা 1 বা এক" style="max-width: 120px" />
               <select id="qtyUnit" style="max-width: 140px">
                 <option value="গ্রাম">গ্রাম</option>
                 <option value="কেজি">কেজি</option>
@@ -56,7 +56,7 @@
             <input id="packDate" type="date" />
           </div>
           <div>
-            <label>মেয়াদ শেষ ডেট</label>
+            <label>মেয়াদ শেষ ডেট</label>
             <input id="expDate" type="date" />
           </div>
           <div>
@@ -67,7 +67,7 @@
         <div class="row gap">
           <button id="addProduct" class="btn">Add Product</button>
           <button id="saveProduct" class="btn btn-secondary">Save Product</button>
-          <button id="clearSaved" class="btn btn-danger" title="লোকাল স্টোরেজ ক্লিয়ার">Clear saved data</button>
+          <button id="clearSaved" class="btn btn-danger" title="লোকাল স্টোরেজ ক্লিয়ার">Clear saved data</button>
         </div>
         <div class="row">
           <div class="flex-1">
@@ -89,7 +89,7 @@
             </div>
           </div>
           <div class="toggle">
-            <label><input type="checkbox" id="showVariation" checked /> ভ্যারিয়েশন</label>
+            <label><input type="checkbox" id="showVariation" checked /> ভ্যারিয়েশন</label>
             <div class="inline">
               <label>Font</label>
               <input id="fsVariation" type="number" min="6" max="24" value="6" /> px
@@ -135,6 +135,9 @@
         <div class="row" style="margin-top: 8px; gap: 8px">
           <button id="saveDisplaySettings" class="btn btn-secondary" type="button">Save display settings</button>
           <button id="resetDisplaySettings" class="btn btn-danger" type="button">Reset display settings</button>
+        </div>
+        <div class="row" style="margin-top: 8px; gap: 8px">
+          <button id="toggleBoldText" class="btn btn-secondary" type="button">Toggle Bold Text</button>
         </div>
       </section>
 
